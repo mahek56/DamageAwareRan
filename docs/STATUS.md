@@ -49,3 +49,12 @@ Test: `$env:PYTHONPATH = 'src'; .\.venv\Scripts\python.exe -m pytest -q`
 Output: results/scores/bag_{val,test}_seed{0,1,2}.npz; load checks passed for IDs, checkpoints, and array shapes. Pytest: 12 passed.
 Open: GRU remains unstarted.
 Needs from: none
+
+### [2026-11-17 18:45 +05:30] R4 E2 metrics and evaluator
+Done: Added bootstrap metrics, validated ID-aligned score loading, CSV/metadata output, and headless damage/ranking figures.
+Files: src/damageaware/eval/metrics.py, src/damageaware/eval/figures.py, scripts/evaluate.py, tests/test_eval_r4.py, docs/STATUS.md
+Run: `$env:PYTHONPATH = 'src'; python scripts/evaluate.py --data-dir data/processed_stub --models bag gru --alphas 0.05 0.10 --seeds 0 1 2 --scores-dir results/scores --out-dir results`
+Test: `$env:PYTHONPATH = 'src'; python -m pytest -q`
+Output: results/tables/main.csv, main_summary.csv, main.meta.json; figures under results/figures. Stub outputs are pipeline validation only, not findings. Pytest: 33 passed.
+Open: none.
+Needs from: none
