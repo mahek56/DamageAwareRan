@@ -11,6 +11,7 @@ from damageaware.contracts import (
     load_trace,
 )
 from damageaware.models.bag import BagOfAPIsDetector
+from damageaware.models.gru import GRUDetector
 from scripts.run_model import main
 
 
@@ -28,6 +29,32 @@ def fitted_bag():
     ]
     val_ids = meta.loc[meta['split'] == 'val', 'sample_id'].tolist()
     detector = BagOfAPIsDetector().fit(train_ids, val_ids, DATA_DIR, seed=17)
+    sample_id = train.loc[train['n_events'].idxmax(), 'sample_id']
+    tok = load_trace(DATA_DIR, sample_id)['tok']
+    return detector, tok
+
+
+@pytest.fixture(scope='module')
+def fitted_gru():
+    meta = load_meta(DATA_DIR)
+    train = meta[meta['split'] == 'train']
+    val = meta[meta['split'] == 'val']
+    train_ids = [
+        sample_id
+        for label in LABELS
+        for sample_id in train.loc[train['label'] == label, 'sample_id'].head(2)
+    ]
+    val_ids = [
+        sample_id
+        for label in LABELS
+        for sample_id in val.loc[val['label'] == label, 'sample_id'].head(2)
+    ]
+    detector = GRUDetector(max_epochs=1).fit(
+        train_ids,
+        val_ids,
+        DATA_DIR,
+        seed=17,
+    )
     sample_id = train.loc[train['n_events'].idxmax(), 'sample_id']
     tok = load_trace(DATA_DIR, sample_id)['tok']
     return detector, tok
@@ -148,3 +175,96 @@ def test_run_model_rejects_unknown_model(tmp_path, capsys):
 
     assert error.value.code == 2
     assert 'registered models: bag' in capsys.readouterr().err
+
+
+def test_gru_output_shapes(fitted_gru):
+    detector, tok = fitted_gru
+    checkpoints = detector.checkpoints[:3]
+
+    scores = detector.score_prefixes(tok, checkpoints)
+    final_probs = detector.final_probs(tok)
+
+    assert scores.shape == (len(checkpoints),)
+    assert final_probs.shape == (4,)
+    assert np.all(np.isfinite(scores))
+    assert np.all(np.isfinite(final_probs))
+    assert np.isclose(final_probs.sum(), 1.0)
+
+
+def test_gru_is_causal_at_checkpoint(fitted_gru):
+    detector, tok = fitted_gru
+    checkpoint = detector.checkpoints[0]
+    assert len(tok) > checkpoint
+
+    changed = tok.copy()
+    changed[checkpoint:] = (changed[checkpoint:] + 1) % detector.vocab_size
+    assert not np.array_equal(tok[checkpoint:], changed[checkpoint:])
+
+    original_score = detector.score_prefixes(tok, [checkpoint])[0]
+    changed_score = detector.score_prefixes(changed, [checkpoint])[0]
+    assert changed_score == pytest.approx(original_score, abs=1e-6)
+
+
+def test_gru_smoke_trains_one_epoch_on_stub(fitted_gru):
+    detector, _ = fitted_gru
+
+    assert detector.max_epochs == 1
+    assert detector.best_epoch == 1
+    assert detector.model is not None
+
+
+def test_gru_vocab_gap_and_max_token_id(fitted_gru):
+    detector, _ = fitted_gru
+    vocab = load_json(DATA_DIR, 'vocab.json')
+    max_token_id = max(int(token_id) for token_id in vocab.values())
+
+    assert len(vocab) < max_token_id + 1
+    assert detector.vocab_size == max_token_id + 1
+    scores = detector.score_prefixes(np.array([max_token_id]), [8])
+    assert scores.shape == (1,)
+    assert np.isfinite(scores[0])
+
+
+def test_gru_handles_short_and_empty_traces(fitted_gru):
+    detector, _ = fitted_gru
+    short_tok = np.array([3, 4, 5])
+
+    short_score = detector.score_prefixes(short_tok, [8])
+    exact_score = detector.score_prefixes(short_tok, [len(short_tok)])
+    short_probs = detector.final_probs(short_tok)
+    empty_score = detector.score_prefixes(np.array([], dtype=np.int32), [8])
+    empty_probs = detector.final_probs(np.array([], dtype=np.int32))
+
+    assert short_score == pytest.approx(exact_score, abs=1e-6)
+    assert short_probs.shape == (4,)
+    assert np.array_equal(empty_score, np.zeros(1, dtype=np.float32))
+    assert np.array_equal(empty_probs, np.zeros(4, dtype=np.float32))
+
+
+def test_run_model_writes_gru_val_and_test_scores(tmp_path, capsys):
+    out_dir = tmp_path / 'scores'
+    assert main(
+        [
+            '--model',
+            'gru',
+            '--data-dir',
+            str(DATA_DIR),
+            '--seed',
+            '0',
+            '--out-dir',
+            str(out_dir),
+            '--max-epochs',
+            '1',
+        ]
+    ) == 0
+    assert 'val macro-F1:' in capsys.readouterr().out
+
+    meta = load_meta(DATA_DIR)
+    checkpoints = load_json(DATA_DIR, 'checkpoints.json')
+    for split in ('val', 'test'):
+        expected_ids = meta.loc[meta['split'] == split, 'sample_id'].tolist()
+        scores = load_scores(out_dir / f'gru_{split}_seed0.npz')
+        assert scores['scores'].shape == (len(expected_ids), len(checkpoints))
+        assert scores['final_probs'].shape == (len(expected_ids), 4)
+        assert scores['sample_ids'].tolist() == expected_ids
+        assert np.array_equal(scores['checkpoints'], checkpoints)

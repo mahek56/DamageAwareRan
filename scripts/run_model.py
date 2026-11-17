@@ -14,6 +14,7 @@ from damageaware.contracts import LABELS, load_json, load_meta, load_trace, save
 
 MODEL_REGISTRY = {
     'bag': ('damageaware.models.bag', 'BagOfAPIsDetector'),
+    'gru': ('damageaware.models.gru', 'GRUDetector'),
 }
 # R3 adds 'cnn', R2 adds 'gru'.
 
@@ -28,20 +29,33 @@ def _parse_args(argv=None):
         default='results/scores',
         help='Directory for score files (default: results/scores)',
     )
+    parser.add_argument(
+        '--max-epochs',
+        type=int,
+        default=None,
+        help='Maximum GRU training epochs (default: 30)',
+    )
     args = parser.parse_args(argv)
     if args.model not in MODEL_REGISTRY:
         registered = ', '.join(sorted(MODEL_REGISTRY))
         parser.error(f"unknown --model {args.model!r}; registered models: {registered}")
+    if args.max_epochs is not None:
+        if not 1 <= args.max_epochs <= 30:
+            parser.error('--max-epochs must be between 1 and 30')
+        if args.model != 'gru':
+            parser.error('--max-epochs is only supported for the gru model')
     return args
 
 
-def _create_detector(name):
+def _create_detector(name, max_epochs=None):
     if name not in MODEL_REGISTRY:
         registered = ', '.join(sorted(MODEL_REGISTRY))
         raise ValueError(f"unknown model {name!r}; registered models: {registered}")
     module_path, class_name = MODEL_REGISTRY[name]
     model_module = import_module(module_path)
     detector_class = getattr(model_module, class_name)
+    if name == 'gru' and max_epochs is not None:
+        return detector_class(max_epochs=max_epochs)
     return detector_class()
 
 
@@ -81,7 +95,7 @@ def main(argv=None):
     val_meta = meta.loc[meta['split'] == 'val']
     val_ids = val_meta['sample_id'].tolist()
 
-    detector = _create_detector(args.model)
+    detector = _create_detector(args.model, args.max_epochs)
     detector.fit(train_ids, val_ids, data_dir, args.seed)
     checkpoints = load_json(data_dir, 'checkpoints.json')
 
