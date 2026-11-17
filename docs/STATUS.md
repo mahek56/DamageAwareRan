@@ -24,6 +24,14 @@ Output: pytest stdout; 10 passed. No model score files were produced.
 Open: GRU not started.
 Needs from: none
 
+### [2026-11-17 15:44 +05:30] R4 E1 thresholds and damage
+Done: Added pure validation threshold selection and per-trace alert/damage calculations, with hand-computed in-memory tests.
+Files: src/damageaware/eval/thresholds.py, src/damageaware/eval/damage.py, tests/test_eval_r4.py, docs/STATUS.md
+Run: `$env:PYTHONPATH = 'src'; python -m pytest -q`
+Output: pytest: 27 passed, 8 existing scikit-learn deprecation warnings. No output files produced.
+Open: Never-caught trace fraction is assumed to be 1.0.
+Needs from: none
+
 ### [2026-11-17 15:00 +05:30] R2 GRU detector
 Done: Added a CPU-only unidirectional GRU with masked position-weighted loss, train-only class weights, validation macro-F1 early stopping, and causal prefix scoring.
 Files: src/damageaware/models/gru.py, scripts/run_model.py, tests/test_models_r2.py, docs/STATUS.md
