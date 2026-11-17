@@ -49,3 +49,11 @@ Run: `python -m pytest -q` and `pytest -q`
 Output: both commands pass in the repo root; 22 passed, 1 skipped, 1 warning. Stub data generated at data/processed_stub and score checks passed without reading the test split for tuning.
 Open: No blockers. `scripts/run_all.py`, `scripts/replay_demo.py`, and `src/damageaware/cli.py` were not started per role instructions.
 Needs from: none
+
+### [2026-11-17 21:23 +05:30] R5 replay demo S2
+Done: Added a single-trace replay plot with sample-id-based score lookup, checkpoint validation, optional validation-derived tau lines and alert markers, and cumulative damage. Missing evaluation thresholds are reported and plots continue without tau.
+Files: scripts/replay_demo.py, tests/test_demo_r5.py, docs/STATUS.md
+Run: `$env:PYTHONPATH = 'src'; python scripts/replay_demo.py --data-dir data/processed_stub --models bag gru --seed 0 --out results/figures/replay_stub.png --tau-from-val`; `pytest -q`
+Output: results/figures/replay_stub.png (114524 bytes); pytest: 24 passed, 1 skipped, 1 warning.
+Open: Stub plot is labeled STUB DATA. `src/damageaware/eval/thresholds.py` is not present, so tau plotting reports that thresholds are unavailable.
+Needs from: none
