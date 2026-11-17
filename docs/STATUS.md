@@ -23,3 +23,12 @@ Run: `$env:PYTHONPATH = 'src'; .\.venv\Scripts\python.exe -m pytest -q`
 Output: pytest stdout; 10 passed. No model score files were produced.
 Open: GRU not started.
 Needs from: none
+
+### [2026-11-17 14:23 +05:30] R2 Bag runner
+Done: Added a lazy bag-only runner, validation macro-F1 reporting, and score-file contract tests.
+Files: scripts/run_model.py, tests/test_models_r2.py, docs/STATUS.md
+Run: `$env:PYTHONPATH = 'src'; foreach ($seed in 0, 1, 2) { .\.venv\Scripts\python.exe scripts\run_model.py --model bag --data-dir data\processed_stub --seed $seed --out-dir results\scores }`
+Test: `$env:PYTHONPATH = 'src'; .\.venv\Scripts\python.exe -m pytest -q`
+Output: results/scores/bag_{val,test}_seed{0,1,2}.npz; load checks passed for IDs, checkpoints, and array shapes. Pytest: 12 passed.
+Open: GRU remains unstarted.
+Needs from: none

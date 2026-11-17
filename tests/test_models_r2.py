@@ -3,8 +3,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from damageaware.contracts import LABELS, load_json, load_meta, load_trace
+from damageaware.contracts import (
+    LABELS,
+    load_json,
+    load_meta,
+    load_scores,
+    load_trace,
+)
 from damageaware.models.bag import BagOfAPIsDetector
+from scripts.run_model import main
 
 
 DATA_DIR = Path(__file__).resolve().parents[1] / 'data' / 'processed_stub'
@@ -95,3 +102,49 @@ def test_bag_handles_short_and_empty_traces(fitted_bag):
         detector._feature(np.array([], dtype=np.int32), 8),
         np.zeros(detector.vocab_size),
     )
+
+
+def test_run_model_writes_bag_val_and_test_scores(tmp_path, capsys):
+    out_dir = tmp_path / 'scores'
+    assert main(
+        [
+            '--model',
+            'bag',
+            '--data-dir',
+            str(DATA_DIR),
+            '--seed',
+            '0',
+            '--out-dir',
+            str(out_dir),
+        ]
+    ) == 0
+    assert 'val macro-F1:' in capsys.readouterr().out
+
+    meta = load_meta(DATA_DIR)
+    checkpoints = load_json(DATA_DIR, 'checkpoints.json')
+    for split in ('val', 'test'):
+        expected_ids = meta.loc[meta['split'] == split, 'sample_id'].tolist()
+        scores = load_scores(out_dir / f'bag_{split}_seed0.npz')
+        assert scores['scores'].shape == (len(expected_ids), len(checkpoints))
+        assert scores['final_probs'].shape == (len(expected_ids), 4)
+        assert scores['sample_ids'].tolist() == expected_ids
+        assert np.array_equal(scores['checkpoints'], checkpoints)
+
+
+def test_run_model_rejects_unknown_model(tmp_path, capsys):
+    with pytest.raises(SystemExit) as error:
+        main(
+            [
+                '--model',
+                'unknown',
+                '--data-dir',
+                str(DATA_DIR),
+                '--seed',
+                '0',
+                '--out-dir',
+                str(tmp_path),
+            ]
+        )
+
+    assert error.value.code == 2
+    assert 'registered models: bag' in capsys.readouterr().err
