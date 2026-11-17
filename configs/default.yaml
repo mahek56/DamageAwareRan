@@ -1,0 +1,5 @@
+data_dir: data/processed_stub   # switch to data/processed when R1 posts REAL DATA READY
+alphas: [0.05, 0.10]
+seeds: [0, 1, 2]
+n_cap: 1024
+damage_level: D1                # R1 sets D1, D2 or D3 after the audit
