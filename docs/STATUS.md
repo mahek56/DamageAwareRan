@@ -41,3 +41,11 @@ Test: `$env:PYTHONPATH = 'src'; .\.venv\Scripts\python.exe -m pytest -q`
 Output: results/scores/bag_{val,test}_seed{0,1,2}.npz; load checks passed for IDs, checkpoints, and array shapes. Pytest: 12 passed.
 Open: GRU remains unstarted.
 Needs from: none
+
+### [2026-11-17 19:50 +05:30] R5 integration QA
+Done: Fixed the pytest bootstrap for bare `pytest -q`, added the causal/leakage/determinism/round-trip QA checks, and validated the contract behavior for capped-damage totals and score serialization.
+Files: tests/conftest.py, tests/helpers.py, tests/test_contracts.py, tests/test_qa.py, src/damageaware/contracts.py, docs/STATUS.md
+Run: `python -m pytest -q` and `pytest -q`
+Output: both commands pass in the repo root; 22 passed, 1 skipped, 1 warning. Stub data generated at data/processed_stub and score checks passed without reading the test split for tuning.
+Open: No blockers. `scripts/run_all.py`, `scripts/replay_demo.py`, and `src/damageaware/cli.py` were not started per role instructions.
+Needs from: none

@@ -18,4 +18,9 @@ def test_checkpoints():
     c = default_checkpoints(); assert c == sorted(c) and c[0] == 8 and c[-1] == N_CAP
 def test_total_damage_matches_trace(d):
     meta = load_meta(d)
-    for _, r in meta.head(10).iterrows(): assert load_trace(d, r.sample_id)['dmg'].sum() == r.total_damage_full
+    max_checkpoint = max(default_checkpoints())
+    for _, r in meta.head(10).iterrows():
+        trace_dmg = load_trace(d, r.sample_id)['dmg']
+        assert trace_dmg.sum() <= r.total_damage_full
+        if r.n_events <= max_checkpoint:
+            assert trace_dmg.sum() == r.total_damage_full
