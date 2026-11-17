@@ -4,7 +4,7 @@
 | R1 Data and audit | Audit EN2025, damage level, parser, splits, real data | src/damageaware/parse.py, splits.py, scripts/audit.py, scripts/build_data.py, configs/damaging_apis.yaml, docs/AUDIT.md | raw data | Yes. Critical path |
 | R2 Bag and GRU | bag-of-APIs and GRU detectors | src/damageaware/models/bag.py, gru.py, scripts/run_model.py, tests/test_models_r2.py | stub, then real data | Yes, on stub |
 | R3 CNN | XRan-style CNN | src/damageaware/models/cnn.py, docs/XRAN_NOTES.md | stub, then real data | Yes, on stub |
-| R4 Evaluation | thresholds, damage, metrics, tables, figures | src/damageaware/eval/*, scripts/evaluate.py | stub scores, then real | Yes, on stub scores |
+| R4 Evaluation | thresholds, damage, metrics, tables, figures | src/damageaware/eval/*, scripts/evaluate.py, tests/test_eval_r4.py | stub scores, then real | Yes, on stub scores |
 | R5 Integration and QA | tests, run_all, CLI report, replay demo | tests/*, scripts/run_all.py, scripts/replay_demo.py, src/damageaware/cli.py, configs/ | everything | Yes |
 | R6 Research and writing | literature, novelty log, paper skeleton, Hancock case | docs/paper/* | none | Yes |
 Lead (you): approves change requests, edits DECISIONS and INTERFACES, merges to main.
